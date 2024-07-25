@@ -55,8 +55,8 @@ def tryon():
                 api_name="/tryon"
             )
 
-            result_image_url = result["result_image"]
-            mask_image_url = result["mask_image"]
+            result_image_url = result[0]
+            mask_image_url = result[1]
 
             return jsonify({
                 "result_image": result_image_url,
