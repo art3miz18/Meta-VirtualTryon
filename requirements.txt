@@ -1,6 +1,2 @@
-Flask
-Flask-CORS
+gradio
 requests
-Pillow
-gunicorn
-gradio_client
