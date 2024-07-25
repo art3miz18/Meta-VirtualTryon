@@ -59,12 +59,8 @@ def tryon():
         
     except Exception as e:
         logging.error("Error processing the request", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-    
-    except Exception as e:
-        logging.error("Error processing the request", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-    
+        return jsonify({"error": str(e)}), 500    
+  
     
 
 if __name__ == '__main__':
