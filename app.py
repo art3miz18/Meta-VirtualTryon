@@ -1,50 +1,80 @@
 import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import requests
 import base64
-from flask import Flask, request, render_template, send_from_directory
-from gradio_client import Client, handle_file
+from PIL import Image
+import io
+import logging
 
+# Initialize Flask app
 app = Flask(__name__)
-UPLOAD_FOLDER = './uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+CORS(app)  # Enable CORS for cross-origin requests
 
-client = Client("http://192.168.0.165:7860/") # local Server
+logging.basicConfig(level=logging.INFO)
 
+HUGGING_FACE_URL = "https://huggingface.co/spaces/InvincibleMeta/Meta-Tryon/tryon"
+# HUGGING_FACE_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
 
-def encode_image_to_base64(file_path):
-    with open(file_path, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-    return encoded_string
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return "API works!"
 
 @app.route('/tryon', methods=['POST'])
 def tryon():
-    human_image = request.files['human_image']
-    clothe_image = request.files['clothe_image']
-    garment_des = request.form.get('garment_des', 'Default description')
+    data = request.json
+    human_img_data = base64.b64decode(data['human_image'])
+    garm_img_data = base64.b64decode(data['garm_image'])
+    garment_des = data['garment_des']
+    is_checked = data['is_checked']
+    is_checked_crop = data['is_checked_crop']
+    denoise_steps = data['denoise_steps']
+    seed = data['seed']
     
-    human_image_path = os.path.join(UPLOAD_FOLDER, human_image.filename)
-    clothe_image_path = os.path.join(UPLOAD_FOLDER, clothe_image.filename)
+    human_img = Image.open(io.BytesIO(human_img_data))
+    garm_img = Image.open(io.BytesIO(garm_img_data))
+
+    human_img_bytes = io.BytesIO()
+    human_img.save(human_img_bytes, format='PNG')
+    human_img_str = base64.b64encode(human_img_bytes.getvalue()).decode('utf-8')
     
-    human_image.save(human_image_path)
-    clothe_image.save(clothe_image_path)
+    garm_img_bytes = io.BytesIO()
+    garm_img.save(garm_img_bytes, format='PNG')
+    garm_img_str = base64.b64encode(garm_img_bytes.getvalue()).decode('utf-8')
     
-    result = client.predict(
-        dict={"background": handle_file(human_image_path), "layers": [], "composite": None},
-        garm_img=handle_file(clothe_image_path),
-        garment_des=garment_des,
-        is_checked=True,
-        is_checked_crop=False,
-        denoise_steps=30,
-        seed=42,
-        api_name="/tryon"
-    )
+    payload = {
+        "human_image": human_img_str,
+        "garm_image": garm_img_str,
+        "garment_des": garment_des,
+        "is_checked": is_checked,
+        "is_checked_crop": is_checked_crop,
+        "denoise_steps": denoise_steps,
+        "seed": seed
+    }
     
-    synthesized_image_base64 = encode_image_to_base64(result[0])
-    mask_image_base64 = encode_image_to_base64(result[1])
+    # headers = {
+    #     "Authorization": f"Bearer {HUGGING_FACE_TOKEN}"
+    # }
     
-    return render_template('result.html', synthesized_image=synthesized_image_base64, mask_image=mask_image_base64)
+    # response = requests.post(HUGGING_FACE_URL, json=payload, headers=headers) # with Access key header token
+    response = requests.post(HUGGING_FACE_URL, json=payload, )
+    result = response.json()
+    
+    result_img = Image.open(io.BytesIO(base64.b64decode(result['result_image'])))
+    mask_img = Image.open(io.BytesIO(base64.b64decode(result['mask_image'])))
+    
+    buffered = io.BytesIO()
+    result_img.save(buffered, format="PNG")
+    result_img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    buffered = io.BytesIO()
+    mask_img.save(buffered, format="PNG")
+    mask_img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    return jsonify({
+        "result_image": result_img_str,
+        "mask_image": mask_img_str
+    })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
