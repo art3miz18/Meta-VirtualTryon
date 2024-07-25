@@ -12,7 +12,7 @@ CORS(app)  # Enable CORS for cross-origin requests
 
 logging.basicConfig(level=logging.INFO)
 
-HUGGING_FACE_URL = "https://huggingface.co/spaces/InvincibleMeta/Meta-Tryon/tryon"
+HUGGING_FACE_URL = "https://huggingface.co/spaces/InvincibleMeta/Meta-Tryon"
 # HUGGING_FACE_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
 
 @app.route('/')
