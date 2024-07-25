@@ -33,12 +33,12 @@ def tryon():
         denoise_steps = int(request.form.get('denoise_steps', 30))
         seed = int(request.form.get('seed', 42))
 
-        with tempfile.NamedTemporaryFile(delete=False) as human_temp, tempfile.NamedTemporaryFile(delete=False) as garm_temp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as human_temp, tempfile.NamedTemporaryFile(suffix=".png", delete=False) as garm_temp:
             human_img = Image.open(human_img_file)
             garm_img = Image.open(garm_img_file)
 
-            human_img.save(human_temp.name)
-            garm_img.save(garm_temp.name)
+            human_img.save(human_temp.name, format="PNG")
+            garm_img.save(garm_temp.name, format="PNG")
 
             result = client.predict(
                 dict={
