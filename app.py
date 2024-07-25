@@ -21,40 +21,45 @@ def index():
 
 @app.route('/tryon', methods=['POST'])
 def tryon():
-    human_img_file = request.files['human_image']
-    garm_img_file = request.files['garm_image']
-    garment_des = request.form.get('garment_des', '')
-    is_checked = request.form.get('is_checked', 'false').lower() == 'true'
-    is_checked_crop = request.form.get('is_checked_crop', 'false').lower() == 'true'
-    denoise_steps = int(request.form.get('denoise_steps', 30))
-    seed = int(request.form.get('seed', 42))
+    try:
+        human_img_file = request.files['human_image']
+        garm_img_file = request.files['garm_image']
+        garment_des = request.form.get('garment_des', '')
+        is_checked = request.form.get('is_checked', 'false').lower() == 'true'
+        is_checked_crop = request.form.get('is_checked_crop', 'false').lower() == 'true'
+        denoise_steps = int(request.form.get('denoise_steps', 30))
+        seed = int(request.form.get('seed', 42))
 
-    human_img = Image.open(human_img_file)
-    garm_img = Image.open(garm_img_file)
+        human_img = Image.open(human_img_file)
+        garm_img = Image.open(garm_img_file)
 
-    human_img.save('/tmp/human_image.png')
-    garm_img.save('/tmp/garm_image.png')
+        human_img.save('/tmp/human_image.png')
+        garm_img.save('/tmp/garm_image.png')
 
-    files = {
-        "dict.background": open('/tmp/human_image.png', 'rb'),
-        "garm_img": open('/tmp/garm_image.png', 'rb'),
-        "garment_des": (None, garment_des),
-        "is_checked": (None, str(is_checked).lower()),
-        "is_checked_crop": (None, str(is_checked_crop).lower()),
-        "denoise_steps": (None, str(denoise_steps)),
-        "seed": (None, str(seed)),
-    }
+        files = {
+            "dict.background": open('/tmp/human_image.png', 'rb'),
+            "garm_img": open('/tmp/garm_image.png', 'rb'),
+            "garment_des": (None, garment_des),
+            "is_checked": (None, str(is_checked).lower()),
+            "is_checked_crop": (None, str(is_checked_crop).lower()),
+            "denoise_steps": (None, str(denoise_steps)),
+            "seed": (None, str(seed)),
+        }
+        
+        # headers = {
+        #     "Authorization": f"Bearer {HUGGING_FACE_TOKEN}"
+        # }
+        
+        response = requests.post(HUGGING_FACE_URL, files=files)
+        # response = requests.post(HUGGING_FACE_URL, files=files, headers=headers)
+        response.raise_for_status()
+        result = response.json()
+        
+        return jsonify(result)
     
-    # headers = {
-    #     "Authorization": f"Bearer {HUGGING_FACE_TOKEN}"
-    # }
-    
-    response = requests.post(HUGGING_FACE_URL, files=files)
-    # response = requests.post(HUGGING_FACE_URL, files=files, headers=headers)
-    result = response.json()
-    
-    return jsonify(result)
-    
+    except Exception as e:
+        logging.error("Error processing the request", exc_info=True)
+        return jsonify({"error": str(e)}), 500
     
     
 
