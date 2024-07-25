@@ -3,3 +3,4 @@ Flask-CORS
 requests
 Pillow
 gunicorn
+gradio_client

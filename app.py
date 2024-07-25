@@ -1,9 +1,9 @@
-import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 from PIL import Image
-import io
+from gradio_client import Client, file
+
 import logging
 
 # Initialize Flask app
@@ -12,8 +12,9 @@ CORS(app)  # Enable CORS for cross-origin requests
 
 logging.basicConfig(level=logging.INFO)
 
-HUGGING_FACE_URL = "https://huggingface.co/spaces/InvincibleMeta/Meta-Tryon"
+HUGGING_FACE_SPACE = "InvincibleMeta/Meta-Tryon"
 # HUGGING_FACE_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
+client = Client(HUGGING_FACE_SPACE)
 
 @app.route('/')
 def index():
@@ -36,26 +37,29 @@ def tryon():
         human_img.save('/tmp/human_image.png')
         garm_img.save('/tmp/garm_image.png')
 
-        files = {
-            "dict.background": open('/tmp/human_image.png', 'rb'),
-            "garm_img": open('/tmp/garm_image.png', 'rb'),
-            "garment_des": (None, garment_des),
-            "is_checked": (None, str(is_checked).lower()),
-            "is_checked_crop": (None, str(is_checked_crop).lower()),
-            "denoise_steps": (None, str(denoise_steps)),
-            "seed": (None, str(seed)),
-        }
+        result = client.predict(
+            dict={
+                "background": file('/tmp/human_image.png'),
+                "layers": [],
+                "composite": None
+            },
+            garm_img=file('/tmp/garm_image.png'),
+            garment_des=garment_des,
+            is_checked=is_checked,
+            is_checked_crop=is_checked_crop,
+            denoise_steps=denoise_steps,
+            seed=seed,
+            api_name="/tryon"
+        )
         
-        # headers = {
-        #     "Authorization": f"Bearer {HUGGING_FACE_TOKEN}"
-        # }
+        return jsonify({
+            "result_image": result[0],
+            "mask_image": result[1]
+        })
         
-        response = requests.post(HUGGING_FACE_URL, files=files)
-        # response = requests.post(HUGGING_FACE_URL, files=files, headers=headers)
-        response.raise_for_status()
-        result = response.json()
-        
-        return jsonify(result)
+    except Exception as e:
+        logging.error("Error processing the request", exc_info=True)
+        return jsonify({"error": str(e)}), 500
     
     except Exception as e:
         logging.error("Error processing the request", exc_info=True)
