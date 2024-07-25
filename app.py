@@ -2,7 +2,6 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
-import base64
 from PIL import Image
 import io
 import logging
@@ -22,59 +21,42 @@ def index():
 
 @app.route('/tryon', methods=['POST'])
 def tryon():
-    data = request.json
-    human_img_data = base64.b64decode(data['human_image'])
-    garm_img_data = base64.b64decode(data['garm_image'])
-    garment_des = data['garment_des']
-    is_checked = data['is_checked']
-    is_checked_crop = data['is_checked_crop']
-    denoise_steps = data['denoise_steps']
-    seed = data['seed']
-    
-    human_img = Image.open(io.BytesIO(human_img_data))
-    garm_img = Image.open(io.BytesIO(garm_img_data))
+    human_img_file = request.files['human_image']
+    garm_img_file = request.files['garm_image']
+    garment_des = request.form.get('garment_des', '')
+    is_checked = request.form.get('is_checked', 'false').lower() == 'true'
+    is_checked_crop = request.form.get('is_checked_crop', 'false').lower() == 'true'
+    denoise_steps = int(request.form.get('denoise_steps', 30))
+    seed = int(request.form.get('seed', 42))
 
-    human_img_bytes = io.BytesIO()
-    human_img.save(human_img_bytes, format='PNG')
-    human_img_str = base64.b64encode(human_img_bytes.getvalue()).decode('utf-8')
-    
-    garm_img_bytes = io.BytesIO()
-    garm_img.save(garm_img_bytes, format='PNG')
-    garm_img_str = base64.b64encode(garm_img_bytes.getvalue()).decode('utf-8')
-    
-    payload = {
-        "human_image": human_img_str,
-        "garm_image": garm_img_str,
-        "garment_des": garment_des,
-        "is_checked": is_checked,
-        "is_checked_crop": is_checked_crop,
-        "denoise_steps": denoise_steps,
-        "seed": seed
+    human_img = Image.open(human_img_file)
+    garm_img = Image.open(garm_img_file)
+
+    human_img.save('/tmp/human_image.png')
+    garm_img.save('/tmp/garm_image.png')
+
+    files = {
+        "dict.background": open('/tmp/human_image.png', 'rb'),
+        "garm_img": open('/tmp/garm_image.png', 'rb'),
+        "garment_des": (None, garment_des),
+        "is_checked": (None, str(is_checked).lower()),
+        "is_checked_crop": (None, str(is_checked_crop).lower()),
+        "denoise_steps": (None, str(denoise_steps)),
+        "seed": (None, str(seed)),
     }
     
     # headers = {
     #     "Authorization": f"Bearer {HUGGING_FACE_TOKEN}"
     # }
     
-    # response = requests.post(HUGGING_FACE_URL, json=payload, headers=headers) # with Access key header token
-    response = requests.post(HUGGING_FACE_URL, json=payload, )
+    response = requests.post(HUGGING_FACE_URL, files=files)
+    # response = requests.post(HUGGING_FACE_URL, files=files, headers=headers)
     result = response.json()
     
-    result_img = Image.open(io.BytesIO(base64.b64decode(result['result_image'])))
-    mask_img = Image.open(io.BytesIO(base64.b64decode(result['mask_image'])))
+    return jsonify(result)
     
-    buffered = io.BytesIO()
-    result_img.save(buffered, format="PNG")
-    result_img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
     
-    buffered = io.BytesIO()
-    mask_img.save(buffered, format="PNG")
-    mask_img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
     
-    return jsonify({
-        "result_image": result_img_str,
-        "mask_image": mask_img_str
-    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
