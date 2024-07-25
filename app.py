@@ -1,10 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests
 from PIL import Image
 from gradio_client import Client, file
-
 import logging
+import tempfile
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -31,31 +30,35 @@ def tryon():
         denoise_steps = int(request.form.get('denoise_steps', 30))
         seed = int(request.form.get('seed', 42))
 
-        human_img = Image.open(human_img_file)
-        garm_img = Image.open(garm_img_file)
+        with tempfile.NamedTemporaryFile(delete=False) as human_temp, tempfile.NamedTemporaryFile(delete=False) as garm_temp:
+            human_img = Image.open(human_img_file)
+            garm_img = Image.open(garm_img_file)
 
-        human_img.save('/tmp/human_image.png')
-        garm_img.save('/tmp/garm_image.png')
+            human_img.save(human_temp.name)
+            garm_img.save(garm_temp.name)
 
-        result = client.predict(
-            dict={
-                "background": file('/tmp/human_image.png'),
-                "layers": [],
-                "composite": None
-            },
-            garm_img=file('/tmp/garm_image.png'),
-            garment_des=garment_des,
-            is_checked=is_checked,
-            is_checked_crop=is_checked_crop,
-            denoise_steps=denoise_steps,
-            seed=seed,
-            api_name="/tryon"
-        )
-        
-        return jsonify({
-            "result_image": result[0],
-            "mask_image": result[1]
-        })
+            result = client.predict(
+                dict={
+                    "background": handle_file(human_temp.name),
+                    "layers": [],
+                    "composite": None
+                },
+                garm_img=handle_file(garm_temp.name),
+                garment_des=garment_des,
+                is_checked=is_checked,
+                is_checked_crop=is_checked_crop,
+                denoise_steps=denoise_steps,
+                seed=seed,
+                api_name="/tryon"
+            )
+
+            result_image_url = result["result_image"]
+            mask_image_url = result["mask_image"]
+
+            return jsonify({
+                "result_image": result_image_url,
+                "mask_image": mask_image_url
+            })
         
     except Exception as e:
         logging.error("Error processing the request", exc_info=True)
