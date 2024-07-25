@@ -1,7 +1,9 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from gradio_client import Client, handle_file
 from PIL import Image
-from gradio_client import Client, file
+import io
 import logging
 import tempfile
 
@@ -11,8 +13,9 @@ CORS(app)  # Enable CORS for cross-origin requests
 
 logging.basicConfig(level=logging.INFO)
 
+# Replace this with your actual Hugging Face Gradio app name
 HUGGING_FACE_SPACE = "InvincibleMeta/Meta-Tryon"
-# HUGGING_FACE_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
+
 client = Client(HUGGING_FACE_SPACE)
 
 @app.route('/')
@@ -59,12 +62,9 @@ def tryon():
                 "result_image": result_image_url,
                 "mask_image": mask_image_url
             })
-        
     except Exception as e:
         logging.error("Error processing the request", exc_info=True)
-        return jsonify({"error": str(e)}), 500    
-  
-    
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
