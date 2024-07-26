@@ -59,8 +59,8 @@ def tryon():
             mask_image_url = result[1]
 
             return jsonify({
-                "result_image": result_image_url,
-                "mask_image": mask_image_url
+                "result_image":"https://invinciblemeta-meta-tryon.hf.space/file=" + result_image_url,
+                "mask_image": "https://invinciblemeta-meta-tryon.hf.space/file=" + mask_image_url
             })
     except Exception as e:
         logging.error("Error processing the request", exc_info=True)
