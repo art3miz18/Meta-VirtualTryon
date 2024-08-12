@@ -26,7 +26,7 @@ VALID_TOKEN = "sk-89QmxJSClcA4EceONWSfF-qw1qwur6cNyE6FeW4sGgs"
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
+        token = request.headers.get('tryonToken')
         logging.info(f"Received token: {token}")
         if token != VALID_TOKEN:
             return jsonify({'message': 'Token is missing or invalid!'}), 401
