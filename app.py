@@ -28,7 +28,7 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
         logging.info(f"Received token: {token}")
-        if not token or not token.startswith('Bearer ') or token.split(' ')[1] != VALID_TOKEN:
+        if token != VALID_TOKEN:
             return jsonify({'message': 'Token is missing or invalid!'}), 401
         return f(*args, **kwargs)
     return decorated
@@ -36,10 +36,18 @@ def token_required(f):
 def index():
     return "API works!"
 
+@app.route('/tryonTest', methods=['POST'])
+@token_required
+def test():
+    return("Validation succesful")
+
 @app.route('/tryon', methods=['POST'])
 @token_required
 def tryon():
     try:
+        if 'human_image' not in request.files or 'garm_image' not in request.files:
+            return jsonify({'error': 'Missing required files'}), 400
+        
         human_img_file = request.files['human_image']
         garm_img_file = request.files['garm_image']
         garment_des = request.form.get('garment_des', '')
@@ -77,7 +85,7 @@ def tryon():
                 api_name="/tryon"
             )
 
-            logging.info(f"Tryon module returned: {result}")
+            # logging.info(f"Tryon module returned: {result}")
 
             # Extract URLs from the result assuming it's a tuple
             if isinstance(result, tuple) and len(result) > 0:
@@ -102,6 +110,7 @@ def tryon():
     except Exception as e:
         logging.error("Error processing the request", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
